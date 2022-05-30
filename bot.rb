@@ -5,19 +5,23 @@ class WhatsAppBot < Sinatra::Base
 
   post "/bot" do
     body = params["Body"].downcase
-    response = Twilio::TwiML::MessagingResponse.new
-    response.message do |message|
-      message.body(Welcome.hello) unless body.include?("1") || body.include?("2")
-      if body.include?("1")
-        message.body(Welcome.accept)
-        if body.include?("CLIENTE")
-          message.body(Customer.hello)
-        end
-      end
-      message.body(Welcome.deny) if body.include?("2")
+
+    answer = body.split.first.downcase.strip
+    if ["yes", "yeah", "yep", "yup", "👍"].include? answer
+      message = "OK, adding that track now."
+    elsif ["no", "nah", "nope", "👎"].include? answer
+      message = "What do you want to add?"
     end
-    content_type "text/xml"
-    response.to_xml
+
+    unless message
+
+      message = "Did you want to add #{body}?"
+
+      message = "I couldn't find any songs by searching for '#{body}'. Try something else."
+    end
+    response = Twilio::TwiML::MessagingResponse.new
+    response.message(body: message)
+    render xml: response.to_xml
   end
 end
 
