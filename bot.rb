@@ -1,47 +1,62 @@
 require "sinatra/base"
 
 class WhatsAppBot < Sinatra::Base
+  enable :sessions
+  # This will ensure that webhook requests definitely come from Twilio.
+  use Rack::TwilioWebhookAuthentication, ENV.fetch("TWILIO_AUTH_TOKEN", nil), "/bot"
+
+  # When we receive a POST request to the /bot endpoint this code will run.
   post "/bot" do
-    body = params["Body"]
-
-    answer = body.split.first.downcase.strip
-    puts session[:answer]
-    if ["1"].include? answer
-      message = "¡Bienvenido a
-      Domesticapp! Para
-      seleccionar una opción
-      del menú, envía solo el
-      número de la opción a
-      través de tu teclado
-      numérico.
-      Seleccione el tipo de
-      atención que desea
-      recibir"
-
-    elsif ["2"].include? answer
-      message = "Gracias por utilizar el
-      canal de WhatsApp de
-      Domesticapp, puedes
-      regresar en cualquier
-      momento"
+    incoming = params[:Body]
+    if incoming == "clear"
+      session[:a] = nil
+    elsif session[:a] == "1"
+      if session[:b]
+        message = "I learned that you prefer #{session[:b] == '1' ? 'fruit cake' : 'sponge cake'}."
+        session.clear
+      elsif incoming == "1"
+        session[:b] = incoming
+        message = "Fruit cake is a great choice!"
+      elsif incoming == "2"
+        session[:b] = incoming
+        message = "Sponge is absolutely classic."
+      else
+        message = "I wanted to know whether you preferred fruit cake or sponge cake? Message 1 for
+                   fruit or 2 for sponge."
+      end
+    elsif session[:a] == "2"
+      if session[:b]
+        message = "I learned that you prefer #{session[:b] == '1' ? 'fruit pie' : 'chocolate pie'}."
+        session.clear
+      elsif incoming == "1"
+        message = "Fruit pie is a wonderful choice!"
+      elsif incoming == "2"
+        message = "Chocolate is just too good."
+      else
+        message = "I wanted to know whether you preferred fruit pie or chocolate pie? Message 1 for
+                   fruit or 2 for chocolate."
+      end
+    elsif incoming == "1"
+      session[:a] = incoming
+      message = "Cake fan, eh? Ok, do you like fruit cake or sponge? Message 1 for fruit cake or 2
+                 for sponge."
+    elsif incoming == "2"
+      session[:a] = incoming
+      message = "Oh, you like pie? Do you prefer fruit pie or chocolate pie? Message 1 for fruit or
+                 2 for chocolate"
+    else
+      message = "I'd like to find out a bit about you. First, do you like cake or pie? Message 1 for
+                 cake or 2 for pie."
     end
-
-    if !session[:answer]
-      message = "¡Hola! Bienvenido al canal de atención de WhatsApp de *Domesticapp*
-      Para seleccionar una opción del menú, envía solo el número de la opción a
-      través de tu teclado numérico.
-      Al utilizar este medio aceptas los términos y condiciones de WhatsApp y te
-      responsabilizas de la información que sea compartida a través del mismo, bajo
-      las características de seguridad de la aplicación. Si quieres ampliar información
-      ingresa aquí: https://www.whatsapp.com/legal
-      Para continuar elige:
-      1 . Acepto
-      2 . No acepto"
-      session[:answer] = answer
-    end
+    # Initialise a new response object that we will build up.
     response = Twilio::TwiML::MessagingResponse.new
-    response.message(body: message)
+    # Add a message to reply with
+    response.message body: message
+    # TwiML is XML, so we set the Content-Type response header to text/xml
     content_type "text/xml"
+    # Respond with the XML of the response object.
     response.to_xml
   end
 end
+
+
