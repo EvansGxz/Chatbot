@@ -39,13 +39,14 @@ HasAndBelongsToMany:
   Enabled: false
 
 Layout/LineLength:
-  Max: 100
+  Max: 150
   AllowedPatterns: ['\s*#']
 
 Metrics/BlockLength:
   Exclude:
     - config/**/*
     - spec/**/*
+  Max: 100
 
 Lint/AmbiguousBlockAssociation:
   Exclude:
